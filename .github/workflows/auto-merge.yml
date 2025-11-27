@@ -1,7 +1,8 @@
-name: Auto-merge Exercism PRs
+name: Auto-merge Exercism Sync
 
 on:
   pull_request:
+    # Only trigger when the exercism-solutions-syncer bot opens a PR
     types: [opened]
 
 permissions:
@@ -11,10 +12,21 @@ permissions:
 jobs:
   auto-merge:
     runs-on: ubuntu-latest
+    # Condition: Only run if the PR author is the official Exercism sync bot
     if: github.actor == 'exercism-solutions-syncer[bot]'
     steps:
-      - name: Enable Auto-merge
+      - name: Enable auto-merge
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PR_URL: ${{ github.event.pull_request.html_url }}
-        run: gh pr merge "$PR_URL" --squash --auto
+        run: |
+          # Approves the PR first (sometimes required before merging)
+          gh pr review "$PR_URL" --approve
+
+          # Merges the PR with squash strategy and adds you as co-author
+          # Uses your GitHub no-reply email to protect privacy
+          gh pr merge --squash --auto "$PR_URL" \
+            --subject "Sync: ${{ github.event.pull_request.title }}" \
+            --body "Automated sync from Exercism.
+
+          Co-authored-by: simplesapien <63670071+simplesapien@users.noreply.github.com>"
